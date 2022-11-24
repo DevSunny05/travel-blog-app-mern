@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Post from "../models/Post";
+import User from "../models/User";
 
 export const getAllPosts = async (req, res) => {
   let posts;
@@ -61,8 +62,10 @@ export const addPost = async (req, res) => {
     const session=await mongoose.startSession();
     session.startTransaction();
     existingUser.posts.push(post);
+    await existingUser.save({session})
+    post = await post.save({session});
+    session.commitTransaction()
 
-    post = await post.save();
   } catch (error) {
     return console.log(error);
   }
@@ -134,7 +137,14 @@ export const deletePost=async(req,res)=>{
     
     let post;
     try {
+        const session=await mongoose.startSession()
+        session.startTransaction();
+        post=await Post.findById(id).populate("user");
+        console.log(post)
+        post.user.posts.pull(post);
+        await post.user.save({session})
         post=await Post.findByIdAndRemove(id);
+        session.commitTransaction()
     } catch (error) {
         return console.log(error)
     }
